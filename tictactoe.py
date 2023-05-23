@@ -2,15 +2,10 @@
 Tic Tac Toe Player
 """
 import copy
-import math
 
 X = "X"
 O = "O"
 EMPTY = None
-
-class InvalidAction(Exception):
-    "Raise exception for invalid action"
-    pass
 
 def initial_state():
     """
@@ -33,10 +28,9 @@ def player(board):
                 x_counter += 1
             elif item == O:
                 o_counter += 1
-    if x_counter > o_counter:
-        return o_counter
-    else:
-        return x_counter
+    if x_counter <= o_counter:
+        return X
+    return O
 
 
 def actions(board):
@@ -55,65 +49,77 @@ def result(board, action):
     """
     Returns the board that results from making move (i, j) on the board.
     """
-    to_play = player(board)
-    copyboard = copy.deepcopy(board)
-    try:
-        at_board = copyboard[action[0]][action[1]]
-        if at_board != EMPTY:
-            raise InvalidAction
-        else:
-            copyboard[action[0]][action[1]] = to_play
-            return copyboard
-    except Exception:
-        raise InvalidAction
+    newboard = copy.deepcopy(board)
+    if not (0 <= action[0] < 3) and (0 <= action[1] < 3):
+        raise Exception
+    if newboard[action[0]][action[1]] is not EMPTY:
+        raise Exception
+    newboard[action[0]][action[1]] = player(board)
+    return newboard
 
 
 def winner(board):
     """
     Returns the winner of the game, if there is one.
     """
-    # horizontal win
+    # Horizontal win
     for row in board:
         if row.count(X) == 3:
             return X
         elif row.count(O) == 3:
             return O
     
-    # vertical win
-    x_count = 0
-    o_count = 0
+    # Vertical win
     for i in range(3):
+        xc = 0
+        oc = 0
         for row in board:
             if row[i] == X:
-                x_count += 1
+                xc += 1
             elif row[i] == O:
-                o_count += 1
-    if x_count == 3:
-        return X
-    elif o_count == 3:
-        return O
-        
-    # there are only 2 possible diagonal wins
-    if board[1][1] == X:
-        if (board[0][0] == X and board[2][2] == X) or (board[0][2] == X and board[2][0] == X):
+                oc += 1
+        if xc == 3:
             return X
-    elif board[1][1] == O:
-        if (board[0][0] == O and board[2][2] == O) or (board[0][2] == O and board[2][0] == O):
+        elif oc == 3:
             return O
+    
+    # Diagonal win (Main & Anti)
+    dcx = ocx = 0
+    for i in range(3):
+        for j in range(3):
+            if i == j:
+                if board[i][j] == X:
+                    dcx += 1
+                elif board[i][j] == O:
+                    ocx += 1
+    if dcx == 3:
+        return X
+    elif ocx == 3:
+        return O
 
-    return None
-
+    dcx = ocx = 0
+    for i in range(3): 
+        for j in range(3):
+            if ((i + j) == (2)): # This condition is for the anti-diagonal, 2 is (3 - 1) or (n - 1)
+                if board[i][j] == X:
+                    dcx += 1
+                elif board[i][j] == O:
+                    ocx += 1
+    if dcx == 3:
+        return X
+    elif ocx == 3:
+        return O
 
 
 def terminal(board):
     """
     Returns True if game is over, False otherwise.
     """
-    # winner - game ended
+    # We have a winner
     if winner(board) in (X,O):
         return True
 
-    # no moves - game ended
+    # No moves left
     for i in range(3):
         for j in range(3):
             if board[i][j] == EMPTY:
@@ -132,20 +138,63 @@ def utility(board):
     else:
         return 0
 
-
 def minimax(board):
     """
     Returns the optimal action for the current player on the board.
-    
-    If I'm the maximizing player, I want to choose from my actions, the one that will 
-    lead to the MAXIMUM possible outcome, from the outcomes my opponent has offered me. 
-    And, of course, my opponent has tried to minimize the outcome to offer me.
 
-    On the contrary, if it's the the minimizing player's turn, now I'm in the shoes of my opponent.
-    In this case, as per my point of view, he/she is trying to minimize my outcome. Then I need to 
-    choose from his/her actions, the one that will lead to the MINIMUM possible outcome 
-    which is what he/she would do. 
+    If I am X: I want to MAXIMIZE my outcome from the outcomes my opponent can play
 
-    Of course, this supposes that your opponent is playing optimally.
+    If I am O: I want to MINIMIZE my outcome from the outcomes my opponent can play
+
+    Supposing opponent is not a dumbass and plays optimally
     """
-    raise NotImplementedError
+    current_player = player(board)
+
+    next_action = None
+    
+
+    if terminal(board):
+        return None
+    
+    if current_player == X:
+        # For every action I can play, I consider my opponents reaction 
+        # I am trying to maximize, opponent trying to minimize
+        v = float('-inf')
+        for action in actions(board):
+            opponent_play = minvalue(result(board, action))
+            if opponent_play > v: # I am maximizing here
+                v = opponent_play
+                next_action = action
+
+    elif current_player == O:
+        # For every action I can play, I consider my opponents reaction 
+        # I am trying to minimize, opponent trying to maximize
+        v = float("inf")
+        for action in actions(board):
+            opponent_play = maxvalue(result(board, action))
+            if opponent_play < v: # I am minimising here
+                v = opponent_play
+                next_action = action
+
+    return next_action
+        
+
+def maxvalue(board):
+    if terminal(board):
+        return utility(board)
+    else:
+        v = float("-inf")
+        for action in actions(board):
+            v = max(v, minvalue(result(board, action)))
+    return v
+    
+    
+
+def minvalue(board):
+    if terminal(board):
+        return utility(board)
+    else:
+        v = float("inf") 
+        for action in actions(board):
+            v = min(v, maxvalue(result(board, action)))
+        return v
