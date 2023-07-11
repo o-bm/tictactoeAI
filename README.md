@@ -45,4 +45,7 @@ By maintaining two values, alpha and beta, the algorithm avoids evaluating moves
 
 Alpha-beta pruning enhances the efficiency of the minimax algorithm, allowing the AI to search deeper into the game tree and make decisions more quickly.
 
+
+
+
 This project was part of Harvard's CS50AI course.
